@@ -5,7 +5,7 @@ from django.utils.text import slugify
 import bleach
 
 # Sanitization allow-lists (extend later if needed)
-ALLOWED_TAGS = sorted(set(bleach.sanitizer.ALLOWED_TAGS + ["p", "h1", "h2", "h3", "pre", "img", "figure", "figcaption"]))
+ALLOWED_TAGS = sorted(set(bleach.sanitizer.ALLOWED_TAGS) | {"p", "h1", "h2", "h3", "pre", "img", "figure", "figcaption"})
 ALLOWED_ATTRIBUTES = {
 	**bleach.sanitizer.ALLOWED_ATTRIBUTES,
 	"img": ["src", "alt", "title"],
