@@ -36,3 +36,17 @@ See prompt spec for: caching (Redis), Celery tasks, S3 storage, thumbnails, sear
 
 ## Testing (to be added)
 Upcoming tests will cover models, slug uniqueness, permissions, and comment visibility.
+
+## Pages Service (MVP Iteration 1)
+Implemented foundational `Page` model and API:
+- Fields: title, slug, content, status (draft/published), published_at, author, meta_title, meta_description, og_image, timestamps.
+- Automatic unique slug generation with numeric suffix handling.
+- Sanitization of HTML content using `bleach` (scripts/unsafe tags stripped).
+- Querysets: `Page.objects.published()` returns only currently published pages.
+- API Endpoints (read-focused for now):
+	- `GET /api/pages/` (published only for public; staff see all)
+	- `GET /api/pages/{slug}/` detail
+	- Staff-authenticated create/update/delete via same endpoints (ModelViewSet).
+- Admin: searchable/filterable with prepopulated slug.
+
+Upcoming iterations will add: preview tokens, per-page caching with invalidation, redirect manager for slug changes, richer editor integration (CKEditor/TinyMCE), media storage abstraction, and CI workflows.
