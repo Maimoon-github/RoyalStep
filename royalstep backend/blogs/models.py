@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
+from taggit.managers import TaggableManager
 
 
 class Category(models.Model):
@@ -53,7 +54,7 @@ class Post(models.Model):
 	cover_image = models.ImageField(upload_to="posts/covers/", null=True, blank=True)
 	views_count = models.PositiveBigIntegerField(default=0, editable=False)
 	categories = models.ManyToManyField(Category, related_name="posts", blank=True)
-	tags = models.ManyToManyField("taggit.Tag", through="taggit.TaggedItem", blank=True)
+	tags = TaggableManager(blank=True)
 
 	class Meta:
 		ordering = ["-published_at", "-created_at"]
