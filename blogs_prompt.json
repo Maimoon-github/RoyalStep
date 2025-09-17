@@ -1,0 +1,221 @@
+{
+  "title": "Django Blog Platform — Implementation Prompt (Combinational Prompting Template)",
+  "purpose": "Provide a single, self-contained JSON prompt that an engineer or an LLM can consume to implement a production-ready Django blog system (models, API, admin, infra, tests, ops) using advanced prompt-engineering patterns: role prompting, contextual prompting, CoT, ToT, ReAct, self-consistency, iterative prompting, negative prompting, and prompt chaining.",
+  "role_prompting": {
+    "system": "You are an expert full-stack engineer and DevOps specialist with deep Django + DRF, Postgres, Redis, Celery, S3, and CI/CD experience. Act as architect, implementer, and reviewer. Prioritize security, correctness, testability, and DX.",
+    "user": "Implement the blog platform described in 'context' and meet the acceptance criteria. Produce code, tests, infra configs, and docs as requested.",
+    "assistant": "When producing code or decisions, include the reasoned steps (brief CoT), create alternatives (ToT branches) for risky decisions, and run self-consistency checks before finalizing outputs."
+  },
+  "context": {
+    "summary": "A modern blog CMS with core Post model, comments, categories/tags, slug uniqueness, REST API, admin UX, image handling, caching, search, security, monitoring, backups, CI/CD and developer DX.",
+    "must_have_items": [
+      "Post model fields: title, slug, author(FK), content, excerpt, status, published_at, created_at, updated_at, cover_image, views_count.",
+      "Unique slug strategy: ensure uniqueness with fallback suffix; consider (slug, published_year) or globally unique slugs.",
+      "Comments with moderation, nesting, spam protection.",
+      "Categories (hierarchical optional) + tags (M2M) — recommend django-taggit.",
+      "DRF API with list/detail/create/update/delete + filters, search, pagination.",
+      "Image optimization + S3 for prod; thumbnails.",
+      "Caching (Redis) and view-count approach with safe increments.",
+      "Admin UI customizations, seed fixtures, management commands, tests, docs."
+    ],
+    "nonfunctional_reqs": [
+      "Secure defaults (HTTPS, CSRF, secure cookies, ALLOWED_HOSTS).",
+      "Env-based secrets only; never commit secrets.",
+      "Migrations tested in CI.",
+      "Backups and monitoring configured.",
+      "No single-point-of-failure for media or DB."
+    ]
+  },
+  "objective": "Deliver a production-ready, maintainable Django blog backend + DRF API and operational runbook so a small team can ship and operate the service safely and reliably.",
+  "negative_constraints": [
+    "Do not output secrets, private keys, or credentials.",
+    "Do not propose insecure defaults (e.g., DEBUG=True in prod, using SQLite for prod).",
+    "Avoid heavy realtime dependencies unless justified (keep components reasonably decoupled).",
+    "Do not over-engineer: prefer Postgres full-text or Meili/Elasticsearch only when justified by scale.",
+    "Do not assume any cloud provider specifics without explicit instruction — provide cloud-agnostic configs and a cloud example (AWS)."
+  ],
+  "acceptance_criteria": {
+    "functionality": [
+      "Post model implemented with all listed fields and a safe unique-slug generation function",
+      "CRUD endpoints work with correct permissions (authors can CRUD their posts; editors/admins moderate).",
+      "Comments support threading + moderation + spam protection hooks",
+      "Category + tag filtering works in the API",
+      "Pagination and search implemented and documented",
+      "Admin UI shows Post, Category, Tag, Comment with helpful filters/actions"
+    ],
+    "quality": [
+      "Automated unit and integration tests covering models, permissions, serializers, and API flows",
+      "CI pipeline that runs lint, tests, migration check",
+      "Basic infra IaC manifest for DB, Redis, object storage (example for AWS)",
+      "Documentation: README, developer runbook, API schema (OpenAPI/Swagger) and deployment steps"
+    ],
+    "ops": [
+      "Backup strategy documented and automated scripts provided",
+      "Monitoring and logging guidance (Sentry + metrics)",
+      "Safe migration notes and a management command for seed data"
+    ]
+  },
+  "step_by_step_instructions": [
+    "1) Initialize repo and environment: create project skeleton, setup .env example, install dependencies (Django, djangorestframework, django-filter, django-taggit, Pillow, django-storages).",
+    "2) Implement core models: Post, Category, Tag (or django-taggit), Comment. Add fields from requirements and Meta ordering. Add soft-delete flag if desired.",
+    "3) Implement generate_unique_slug(model, title) helper with slugify fallback suffix loop and unit tests.",
+    "4) Create serializers and viewsets (DRF) with permission classes: IsAuthenticatedOrReadOnly + IsOwnerOrReadOnly. Add filters for category/tag/author and search.",
+    "5) Add pagination (cursor or limit-offset) and full-text search hookup (Postgres to_tsvector + GIN index example) or Meili/Elastic alternative notes.",
+    "6) Implement comment moderation and spam protector hooks (reCAPTCHA + Akismet adapter), plus admin actions to approve/reject.",
+    "7) Admin UI: register Post, Category, Tag, Comment; add list_display, list_filter, search_fields and inlines for images/tags.",
+    "8) Image handling: configure django-storages for S3 (example settings), create thumbnails via django-versatileimagefield or Pillow-based helper.",
+    "9) Caching & view counts: use Redis; implement atomic increment (Redis INCR or DB-safe bytecode) and periodic aggregation job (Celery task).",
+    "10) Drafts & scheduling: respect published_at and scheduled publishing; optionally implement a Celery beat task to run scheduled publishes and notify.",
+    "11) Tests: models, serializers, view permissions, slug uniqueness, comment moderation, and integration tests (API flows).",
+    "12) CI: add GitHub Actions (or similar) steps: lint, test, `python manage.py migrate --plan` then `migrate` in deploy stage, build image (if using containers).",
+    "13) Monitoring & backups: add Sentry integration, export metrics endpoints, provide DB and media backup scripts and restore instructions.",
+    "14) Documentation: write README with setup, API docs (Swagger/Redoc), runbook for deploy/rollback/migrations, and developer conventions for PRs/commits."
+  ],
+  "coT_template": {
+    "instruction": "When solving a subtask, produce structured internal reasoning using this template. (This is a prompt instruction — do not output raw chain-of-thought to public users in production logs.)",
+    "template": [
+      "1) Goal: <short statement of the subtask>",
+      "2) Assumptions: <explicit assumptions being made>",
+      "3) Constraints & Risks: <listing constraints and potential risks>",
+      "4) Plan (steps): <ordered actionable steps>",
+      "5) Decision points (ToT branches): <if X then A, else B>",
+      "6) Output: <what will be produced: code/files/tests>",
+      "7) Verification: <how to test/validate>"
+    ]
+  },
+  "ToT_example": {
+    "decision_context": "Slug uniqueness strategy",
+    "branches": [
+      {
+        "branch": "Global unique slug (unique=True)",
+        "pros": ["Simple lookups", "Search-engine-friendly consistent URLs"],
+        "cons": ["May conflict across years; no same-slug historical posts"],
+        "implementation_notes": "Add unique index on slug; generate fallback with -1, -2; provide archival slug renaming strategy."
+      },
+      {
+        "branch": "Unique per published_year (slug, published_year unique)",
+        "pros": ["Allows same slugs across years (legacy)"],
+        "cons": ["URL includes year; more complex lookups", "SEO implications"],
+        "implementation_notes": "Use `UniqueConstraint(fields=['slug','published_at__year'])` or stored `published_year` field."
+      }
+    ]
+  },
+  "ReAct_instructions": {
+    "pattern": "For tasks that require external checks or actions (DB queries, filesystem, network), alternate Reasoning steps and Action steps. Example:",
+    "example": [
+      "REASON: Need to ensure slug uniqueness.",
+      "ACTION: Query Post.objects.filter(slug=slug).exists()",
+      "REASON: If exists, append suffix and re-check; else proceed to save.",
+      "ACTION: Save Post and log audit event."
+    ]
+  },
+  "iterative_prompting_flow": {
+    "iteration_1": "MVP: Models + Admin + minimal DRF endpoints + tests for model + unique slug helper.",
+    "iteration_2": "Comments moderation + tags + category filters + pagination + more tests.",
+    "iteration_3": "Image storage S3 + caching (Redis) + search (Postgres GIN) + scheduled publishing.",
+    "iteration_4": "CI/CD, infra manifests, backups, monitoring, and documentation.",
+    "note": "Each iteration must produce runnable code, tests passing locally, and a short changelog of what changed."
+  },
+  "negative_prompting_examples": [
+    "Do not return secrets (.env values, AWS keys) in outputs.",
+    "Do not use SQLite for production in any infra manifests.",
+    "Avoid storing uploaded files on the app server filesystem in production.",
+    "Do not skip tests or CI steps in PRs."
+  ],
+  "prompt_chaining": {
+    "overview": "Break the implementation into smaller prompts/subtasks and chain them. Each subtask prompt should reference the original context and acceptance criteria.",
+    "chain": [
+      {
+        "subtask": "Model Implementation",
+        "prompt": "Implement Django models for Post, Category, Comment, Tag (or integrate django-taggit). Include migrations. Return code files and unit tests."
+      },
+      {
+        "subtask": "Unique Slug Helper",
+        "prompt": "Implement generate_unique_slug(model, title) with tests that simulate collisions."
+      },
+      {
+        "subtask": "API & Permissions",
+        "prompt": "Create DRF serializers + viewsets with IsOwnerOrReadOnly and admin roles, filtering, pagination, and search."
+      },
+      {
+        "subtask": "Admin UI",
+        "prompt": "Register models in admin with list and action customizations and provide screenshots or admin config code."
+      },
+      {
+        "subtask": "Infra & CI",
+        "prompt": "Provide Dockerfile, example docker-compose for dev (Postgres, Redis), and a GitHub Actions CI workflow for tests + lint."
+      }
+    ]
+  },
+  "validation_suite": {
+    "unit_tests": [
+      "Model field tests: field existence, default values.",
+      "Slug tests: collisions, unicode titles, truncation to max length.",
+      "Permission tests: authors can edit; others cannot.",
+      "Comment moderation tests: unapproved comments not returned in public endpoints."
+    ],
+    "integration_tests": [
+      "Create post -> publish -> verify in feed endpoint with pagination and correct ordering.",
+      "Upload image -> ensure thumbnail created and S3 URL returned (can mock S3)."
+    ],
+    "load_and_safety_checks": [
+      "Run a simple load test for read endpoints (e.g., 100 RPS) in a sandbox and ensure DB indices exist on published_at and status.",
+      "Check caching invalidation after post update."
+    ]
+  },
+  "deliverables": {
+    "code": [
+      "Django app package (models.py, serializers.py, viewsets.py, urls.py, admin.py, tests/)",
+      "migrations/",
+      "management commands for seed data and rebuild-index",
+      "unique slug helper"
+    ],
+    "infra": [
+      "docker-compose.dev.yml (Postgres, Redis, celery worker/beat)",
+      "Dockerfile example",
+      "example k8s manifests or Terraform snippets for prod (DB, object storage, Redis)",
+      "GitHub Actions CI workflow"
+    ],
+    "docs": [
+      "README with setup and running instructions",
+      "API schema (OpenAPI) and examples",
+      "Runbook: deploy, migrations, backups, restore",
+      "Security checklist"
+    ]
+  },
+  "priority_milestones": [
+    "Core models + migrations + admin UI",
+    "DRF endpoints + serializers + permissions",
+    "Slug uniqueness + tests",
+    "Comments + moderation + spam hooks",
+    "Image/storage + caching",
+    "Search + pagination + monitoring + backups",
+    "CI/CD + deployment runbook"
+  ],
+  "developer_experience_guidelines": {
+    "commits": "Small atomic commits; each PR must include tests. Use conventional commit messages (feat/, fix/, chore/, docs/).",
+    "code_style": "Use black + isort + flake8 (or ruff) in CI.",
+    "PR_requirements": "Pass CI, review from at least one other engineer, include migration plan if DB changes."
+  },
+  "examples_snippets": {
+    "post_model_python": "class Post(models.Model):\n    STATUS_CHOICES = (('draft','Draft'),('published','Published'))\n    title = models.CharField(max_length=255)\n    slug = models.SlugField(max_length=255, unique=True)\n    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)\n    content = models.TextField()\n    excerpt = models.CharField(max_length=512, blank=True)\n    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='draft')\n    published_at = models.DateTimeField(null=True, blank=True)\n    created_at = models.DateTimeField(auto_now_add=True)\n    updated_at = models.DateTimeField(auto_now=True)\n    cover_image = models.ImageField(upload_to='posts/covers/', null=True, blank=True)\n\n    class Meta:\n        ordering = ['-published_at', '-created_at']",
+    "unique_slug_helper_python": "from django.utils.text import slugify\n\ndef generate_unique_slug(model, title, slug_field='slug', max_length=255):\n    base = slugify(title)[: max_length]\n    slug = base\n    index = 1\n    Model = model\n    while Model.objects.filter(**{slug_field: slug}).exists():\n        slug = f\"{base}-{index}\"\n        if len(slug) > max_length:\n            # truncate base to make room for suffix\n            trim = max_length - len(f\"-{index}\")\n            base = base[:trim]\n            slug = f\"{base}-{index}\"\n        index += 1\n    return slug",
+    "drf_viewset_example": "class PostViewSet(viewsets.ModelViewSet):\n    queryset = Post.objects.all()\n    serializer_class = PostSerializer\n    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]\n    filterset_fields = ['author', 'status', 'categories__slug']\n    search_fields = ['title', 'content', 'excerpt']\n    ordering = ['-published_at']"
+  },
+  "self_consistency_checks": [
+    "Before finalizing, ensure: (a) no DEBUG=True in production settings; (b) SECRET_KEY comes from env; (c) DB indices exist for published_at and status; (d) slug collisions covered by tests; (e) migrations committed.",
+    "Run the automated test suite locally and in CI and ensure no failing tests.",
+    "Verify admin UX: confirm actions (approve, publish) exist and are tested."
+  ],
+  "fallbacks": {
+    "if_no_s3": "Use signed URLs from the app server for smaller projects and document migration steps to S3 when scale requires.",
+    "if_no_celery": "Use Django management command scheduled by cron or platform scheduler (e.g., Heroku Scheduler) and document tradeoffs."
+  },
+  "final_instructions_for_executor": [
+    "Follow the iterative_prompting_flow: produce a working MVP first (models + admin + basic API + tests).",
+    "At each PR, include the CoT template filled out in the PR description for reviewer context (Goal, Assumptions, Plan, Decision points, Verification).",
+    "When a risky decision is made, include the ToT branches and why you chose one.",
+    "Do NOT include any secret or environment values in code or outputs. Provide example .env.example only.",
+    "When you finish an iteration, return: code, test results, migration files, a short changelog, and the filled CoT/ToT for reviewer."
+  ]
+}
